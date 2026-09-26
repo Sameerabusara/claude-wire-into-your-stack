@@ -1,15 +1,20 @@
 {
-  "hooks": {
-    "before-commit": {
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "matcher": {
+        "tool": "Bash",
+        "pattern": "git commit"
+      },
       "command": "npm run lint",
       "description": "Lint the codebase before allowing commits",
       "allowedTools": ["Bash"]
     }
-  },
+  ],
   "permissions": [
     {
       "tool": "Bash",
-      "pattern": "npm (run (dev|test|lint)|test)",
+      "pattern": "npm (run (test|lint)|test)",
       "scope": "project"
     }
   ]

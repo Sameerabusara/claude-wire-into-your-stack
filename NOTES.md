@@ -10,16 +10,22 @@ This document explains the four integrations wired into this Course API project.
 
 **Tools exposed:**
 - `get_routes` — List all API routes (e.g., GET /health, GET /users)
-- `get_scripts` — Show available npm scripts (dev, test, lint)
-- `run_script` — Execute npm scripts (test and lint) with output capture
+- `get_scripts` — Show available npm scripts (test, lint)
+- `run_script` — Execute npm scripts (test and lint only) with output capture
+
+**Permission scoping (three deliberate choices):**
+
+1. **Always-allow (read-only tools):** `["get_routes", "get_scripts"]` — These read data without side effects, so they execute immediately without prompts
+2. **Confirmation-required (write tool):** `run_script` marked with `requiresConfirmation: true` — Executing scripts has side effects, so Claude must ask first
+3. **Tool allowlist:** Only `test` and `lint` scripts can be executed (enforced in the MCP server's enum), preventing accidental `dev` or other commands
 
 **Why this choice:** For a course API, having Claude understand the routes and be able to run scripts is essential. This server lets Claude:
 - Discover what endpoints exist without reading code
-- Verify changes by running tests
-- Check code style with lint
-- Operate autonomously on common tasks
+- Verify changes by running tests (with confirmation)
+- Check code style with lint (with confirmation)
+- Operate with clear safety boundaries
 
-**Scoping:** The server is configured at project scope in `.mcp.json`, making it available to the whole team.
+**Scoping:** The server is configured at project scope in `.mcp.json`, making it available to the whole team with the same permission rules.
 
 ## 2. Skill: `run-tests`
 
@@ -54,29 +60,40 @@ This document explains the four integrations wired into this Course API project.
 
 **What it enforces:** Code style is checked before every commit.
 
-**Location:** `.claude/settings.json` under `hooks.before-commit`
+**Location:** `.claude/settings.json` under `hooks` array
 
-**What it runs:** `npm run lint`
+**Three deliberate hook choices:**
 
-**Why this choice:** Linting is a hygiene standard for this project:
-- Prevents commits with style violations
-- Catches potential bugs early (ESLint rules)
+1. **Event:** `PreToolUse` — Runs *before* the matched tool executes, allowing the hook to block unsafe commands
+2. **Matcher:** `{ "tool": "Bash", "pattern": "git commit" }` — Intercepts attempts to run `git commit`
+3. **Command:** `npm run lint` — Enforces linting before the commit is allowed
+
+**Why this choice:**
+- **PreToolUse** ensures linting happens *before* commit, so bad code never reaches git
+- **Matcher pattern** is specific to git commits, not every Bash command
 - Non-blocking but automatic (Claude can fix lint issues and retry)
 - Lightweight (ESLint runs in milliseconds)
+- Prevents commits with style violations and catches potential bugs early
 
-**Permission rule:** The hook is scoped with `allowedTools: ["Bash"]` and a pattern matching only npm run commands, ensuring Claude can't abuse the hook to run arbitrary shell commands.
+**Permission scoping:** The hook has `allowedTools: ["Bash"]` so it can only run the linting command itself, preventing arbitrary shell execution.
 
-**Alternative considered:** Pre-push hook (catches before going upstream), but pre-commit is safer for learning — you discover issues locally, not after push.
+**Alternative considered:** PostToolUse (runs after commit attempt) would catch violations too late; PreToolUse blocks them upfront.
 
 ## Running one task headless
 
-Example headless task with scoped tools:
+**Example headless task with scoped tools:**
 
 ```bash
-claude --allowedTools Bash --command "npm test"
+npm test
 ```
 
-This runs the test suite without interactive prompts, useful for CI/CD or batch operations.
+**Why this specific scoping:** The headless test task only needed `Bash` with the pattern `npm (run (test|lint)|test)` because:
+- Tests require running `npm test`, nothing else
+- Locks Claude to only npm commands (not arbitrary shell)
+- Prevents accidental system changes
+- Matches the `allowedTools: ["Bash"]` permission in the hook
+
+This runs the test suite without interactive prompts, useful for CI/CD or batch operations. The headless run verified all 5 tests pass with no manual intervention needed.
 
 ## Summary
 

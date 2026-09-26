@@ -4,7 +4,20 @@
       "command": "node",
       "args": ["./.claude/mcp/inspector.js"],
       "env": {},
-      "alwaysAllow": []
+      "alwaysAllow": ["get_routes", "get_scripts"],
+      "permissions": [
+        {
+          "tool": "course-api-inspector",
+          "allow": ["get_routes", "get_scripts"],
+          "description": "Read-only inspection of API routes and available scripts"
+        },
+        {
+          "tool": "course-api-inspector",
+          "allow": ["run_script"],
+          "description": "Run npm scripts (test and lint only)",
+          "requiresConfirmation": true
+        }
+      ]
     }
   }
 }
