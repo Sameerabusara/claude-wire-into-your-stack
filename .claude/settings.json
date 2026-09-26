@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "before-commit": {
+      "command": "npm run lint",
+      "description": "Lint the codebase before allowing commits",
+      "allowedTools": ["Bash"]
+    }
+  },
+  "permissions": [
+    {
+      "tool": "Bash",
+      "pattern": "npm (run (dev|test|lint)|test)",
+      "scope": "project"
+    }
+  ]
+}

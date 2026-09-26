@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "course-api-inspector": {
+      "command": "node",
+      "args": ["./.claude/mcp/inspector.js"],
+      "env": {},
+      "alwaysAllow": []
+    }
+  }
+}
